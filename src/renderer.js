@@ -440,7 +440,7 @@ async function loadAutoSavedTasks() {
     const result = await window.electronAPI.loadAutoSavedTasks();
     if (result.success && result.todoList) {
       todoList = result.todoList;
-      MainTodo.init();
     }
   }
+   MainTodo.init();
 }
