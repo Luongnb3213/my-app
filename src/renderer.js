@@ -1,53 +1,27 @@
-/**
- * This file will automatically be loaded by webpack and run in the "renderer" context.
- * To learn more about the differences between the "main" and the "renderer" context in
- * Electron, visit:
- *
- * https://electronjs.org/docs/tutorial/process-model
- *
- * By default, Node.js integration in this file is disabled. When enabling Node.js integration
- * in a renderer process, please be aware of potential security implications. You can read
- * more about security risks here:
- *
- * https://electronjs.org/docs/tutorial/security
- *
- * To enable Node.js integration in this file, open up `main.js` and enable the `nodeIntegration`
- * flag:
- *
- * ```
- *  // Create the browser window.
- *  mainWindow = new BrowserWindow({
- *    width: 800,
- *    height: 600,
- *    webPreferences: {
- *      nodeIntegration: true
- *    }
- *  });
- * ```
- */
-
 import './index.css';
 
-var todoList = [
-  {
-    id: 1,
-    text: 'Learn Yoga',
-    priority: 'Medium',
-    completed: false,
-  },
-  {
-    id: 2,
-    text: 'Learn Yoga ehe',
-    priority: 'High',
-    completed: true,
-  },
-  {
-    id: 2,
-    text: 'Learn Yoga lol',
-    priority: 'Low',
-    completed: false,
-  },
-];
+// var todoList = [
+//   {
+//     id: 1,
+//     text: 'Learn Yoga',
+//     priority: 'Medium',
+//     completed: false,
+//   },
+//   {
+//     id: 2,
+//     text: 'Learn Yoga ehe',
+//     priority: 'High',
+//     completed: true,
+//   },
+//   {
+//     id: 3,
+//     text: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffw',
+//     priority: 'Low',
+//     completed: false,
+//   },
+// ];
+
+var todoList = [];
 
 var stylePriority = {
   High: {
@@ -238,15 +212,18 @@ const MainTodo = (() => {
           if (e.target.type !== 'checkbox') {
             e.preventDefault();
           }
-          const todoId = item.dataset.id;
+          const todoId = e.currentTarget.dataset.id;
           const todo = todoList.find((todo) => todo.id == todoId);
           if (todo) {
             todo.completed = !todo.completed;
-            item.querySelector('input').checked = todo.completed;
-            if (item.parentElement.hasAttribute('disabled')) {
-              item.parentElement.removeAttribute('disabled');
+            e.currentTarget.querySelector('input').checked = todo.completed;
+            if (e.currentTarget.parentElement.hasAttribute('disabled')) {
+              e.currentTarget.parentElement.removeAttribute('disabled');
             } else {
-              item.parentElement.setAttribute('disabled', true);
+              e.currentTarget.parentElement.setAttribute('disabled', true);
+              if (window.electronAPI) {
+                window.electronAPI.taskCompleted(todo);
+              }
             }
           }
         };
@@ -323,14 +300,16 @@ const MainTodo = (() => {
         }
         taskItem.setAttribute('data-id', todo.id);
         taskItem.innerHTML = `
-              <label  class="flex flex-1 items-center gap-2 cursor-pointer text-sm text-gray-800 task_label" data-id="${
+              <div  class="flex flex-1 items-start gap-2 cursor-pointer text-sm text-gray-800 task_label" data-id="${
                 todo.id
               }">
                   <input type="checkbox" class="w-4 h-4 text-blue-600 bg-white border border-gray-300 rounded-sm focus:ring-0 focus:outline-none cursor-pointer" ${
                     todo.completed ? 'checked' : ''
                   } />
-                  <span class="text_task text-base">${todo.text}</span>
-              </label>
+                  <span class="text_task text-base break-words break-all">${
+                    todo.text
+                  }</span>
+              </div>
               <div class="priority-item flex justify-between items-center px-2 py-1 transition-all duration-300">
                   <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
                     stylePriority[todo.priority].bg
@@ -348,8 +327,6 @@ const MainTodo = (() => {
     },
   };
 })();
-
-MainTodo.init();
 
 const AddTodo = (() => {
   return {
@@ -416,9 +393,54 @@ const AddTodo = (() => {
         MainTodo.clearFilter();
         SelectComboBox.clear();
         MainTodo.render();
+        if (window.electronAPI) {
+          window.electronAPI.taskAdded(newTodo);
+        }
       });
     },
   };
 })();
 
 AddTodo.init();
+
+async function exportTasks() {
+  if (window.electronAPI) {
+    const result = await window.electronAPI.exportTasks(todoList);
+    if (result.success) {
+      console.log('Tasks exported to:', result.filePath);
+    } else {
+      console.error('Export failed:', result.message);
+    }
+  }
+}
+
+const exportButton = document.getElementById('export-button');
+if (exportButton) {
+  exportButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    exportTasks();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadAutoSavedTasks();
+  setupAutoSave();
+});
+
+function setupAutoSave() {
+  setInterval(async () => {
+    if (window.electronAPI) {
+      const result = await window.electronAPI.autoSaveTasks(todoList);
+    }
+  }, 5000);
+}
+
+async function loadAutoSavedTasks() {
+  if (window.electronAPI) {
+    const result = await window.electronAPI.loadAutoSavedTasks();
+    if (result.success && result.todoList) {
+      todoList = result.todoList;
+      MainTodo.init();
+    }
+  }
+}

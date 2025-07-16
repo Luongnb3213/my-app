@@ -37,7 +37,6 @@ input[name='option_filter'] {
   color: #999;
 }
 
-
 .task_item[disabled] .priority-item {
   text-decoration: line-through;
 }
@@ -45,4 +44,22 @@ input[name='option_filter'] {
 .list_task {
   height: calc(100% - 32px);
   overflow-y: auto;
+}
+
+#priority_search_input {
+  width: 100%;
+  min-width: 4.1px;
+}
+
+.reminder-setting {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.reminder-setting input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
