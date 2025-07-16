@@ -369,7 +369,7 @@ const MainTodo = (() => {
     deleteTask() {
       const deleteButtons = document.querySelectorAll('.delete_task');
       deleteButtons.forEach((button) => {
-        button.addEventListener('click', (e) => {       
+        button.addEventListener('click', (e) => {
           e.stopPropagation();
           const taskId = e.currentTarget.dataset.id;
           todoList = todoList.filter((todo) => todo.id !== taskId);
@@ -378,6 +378,16 @@ const MainTodo = (() => {
           if (window.electronAPI) {
             window.electronAPI.taskCompleted({ id: taskId, completed: true });
           }
+        });
+      });
+    },
+
+    editTask() {
+      const editButtons = document.querySelectorAll('.edit_task');
+      editButtons.forEach((button) => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          editPopup.openPopup();
         });
       });
     },
@@ -492,48 +502,68 @@ const MainTodo = (() => {
 
       this.taskItemClicked();
       this.deleteTask();
+      this.editTask();
     },
   };
 })();
 
+const editPopup = (() => {
+  const popup = document.getElementById('edit-popup');
+  const popupInner = document.getElementById('edit-popup-inner');
+
+  return {
+    init() {
+      this.bindEvents();
+    },
+
+    bindEvents() {
+      const edit_cancel_button = document.getElementById('edit-cancel-button');
+      const edit_confirm_button = document.getElementById(
+        'edit-confirm-button'
+      );
+
+      edit_cancel_button.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.closePopup();
+      });
+
+      edit_confirm_button.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.closePopup();
+      });
+
+      document.getElementById('edit-popup')?.addEventListener('click', (e) => {
+        if (!document.getElementById('edit-popup-inner').contains(e.target)) {
+          this.closePopup();
+        }
+      });
+    },
+
+    openPopup() {
+      popup.classList.remove('hidden');
+      setTimeout(() => {
+        popupInner.classList.remove('opacity-0', 'scale-95');
+        popupInner.classList.add('opacity-100', 'scale-100');
+      }, 10);
+    },
+
+    closePopup() {
+      popupInner.classList.remove('opacity-100', 'scale-100');
+      popupInner.classList.add('opacity-0', 'scale-95');
+
+      setTimeout(() => {
+        popup.classList.add('hidden');
+      }, 300);
+    },
+  };
+})();
+
+editPopup.init();
+
 const AddTodo = (() => {
   return {
     init() {
-      this.dropDown();
       this.submitButton();
-    },
-
-    dropDown() {
-      const selectButton = document.getElementById('select-button');
-      const dropdown = document.getElementById('dropdown');
-      const selectedOption = document.getElementById('selected-option');
-
-      selectButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('hidden');
-      });
-
-      dropdown.querySelectorAll('li').forEach((item) => {
-        item.addEventListener('click', () => {
-          selectedOption.dataset.value = item.dataset.value;
-          selectedOption.innerHTML = `
-                <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
-                  stylePriority[item.dataset.value].bg
-                } border ${stylePriority[item.dataset.value].border} ${
-            stylePriority[item.dataset.value].text
-          } rounded-[2px] box-border text-[12px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
-                    ${item.dataset.value}
-                </span>
-            `;
-          dropdown.classList.add('hidden');
-        });
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!dropdown.classList.contains('hidden')) {
-          dropdown.classList.add('hidden');
-        }
-      });
     },
 
     submitButton() {
@@ -541,7 +571,7 @@ const AddTodo = (() => {
       submitButton.addEventListener('click', (e) => {
         e.preventDefault();
         const todoInput = document.getElementById('todo-input');
-        const selectedOption = document.getElementById('selected-option');
+        const selectedOption = document.getElementById('priority-dropdown-add')?.querySelector(".selected-option");
         const errorInput = document.querySelector('.text-error-input');
 
         if (todoInput.value.trim() === '') {
@@ -613,3 +643,42 @@ async function loadAutoSavedTasks() {
   }
   MainTodo.init();
 }
+
+
+
+
+class PriorityDropdown extends HTMLElement {
+  connectedCallback() {
+    console.log(this)
+    const button = this.querySelector('.select-button');
+    const dropdown = this.querySelector('.dropdown');
+    const selected = this.querySelector('.selected-option');
+
+    button?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+
+    this.querySelectorAll('li').forEach((item) => {
+      item.addEventListener('click', () => {
+        const value = item.dataset.value;
+        selected.dataset.value = value;
+        selected.innerHTML = `
+          <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
+            stylePriority[value].bg
+          } border ${stylePriority[value].border} ${stylePriority[value].text} rounded-[2px] box-border text-[12px] leading-[20px] m-0 mr-2 px-[7px]">
+            ${value}
+          </span>`;
+        dropdown.classList.add('hidden');
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.classList.contains('hidden')) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  }
+}
+
+customElements.define('priority-dropdown', PriorityDropdown);
