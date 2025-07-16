@@ -1,10 +1,48 @@
 {
-  "lastSaved": "2025-07-16T03:49:14.275Z",
+  "lastSaved": "2025-07-16T09:34:34.959Z",
   "todoList": [
+    {
+      "id": "1752655934064",
+      "text": "fwwrwr",
+      "priority": "High",
+      "completed": false
+    },
     {
       "id": "1752637416957",
       "text": "Yoga",
       "priority": "Medium",
+      "completed": false,
+      "deadline": "2025-07-17T07:00:00.000Z"
+    },
+    {
+      "id": "1752652978358",
+      "text": "fwf",
+      "priority": "Medium",
+      "completed": false,
+      "deadline": "2025-07-18T12:30:00.000Z"
+    },
+    {
+      "id": "1752655428232",
+      "text": "fasfasfafw",
+      "priority": "Medium",
+      "completed": false
+    },
+    {
+      "id": "1752655432472",
+      "text": "sfasfawfwfawf",
+      "priority": "Medium",
+      "completed": false
+    },
+    {
+      "id": "1752655501352",
+      "text": "fwfwfwfwf",
+      "priority": "Medium",
+      "completed": false
+    },
+    {
+      "id": "1752656682584",
+      "text": "fwfwfwf",
+      "priority": "Low",
       "completed": false
     }
   ]

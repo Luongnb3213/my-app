@@ -1,26 +1,5 @@
 import './index.css';
 
-// var todoList = [
-//   {
-//     id: 1,
-//     text: 'Learn Yoga',
-//     priority: 'Medium',
-//     completed: false,
-//   },
-//   {
-//     id: 2,
-//     text: 'Learn Yoga ehe',
-//     priority: 'High',
-//     completed: true,
-//   },
-//   {
-//     id: 3,
-//     text: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffw',
-//     priority: 'Low',
-//     completed: false,
-//   },
-// ];
-
 var todoList = [];
 
 var stylePriority = {
@@ -45,6 +24,7 @@ var filters = {
   searchText: '',
   priority: [],
   completed: 'all',
+  sortType: 'default',
 };
 
 const SelectComboBox = (() => {
@@ -196,12 +176,24 @@ const SelectComboBox = (() => {
 })();
 SelectComboBox.init();
 
+function debounce(func, delay) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(this, args);
+    }, delay);
+  };
+}
+
 const MainTodo = (() => {
   return {
     init() {
       this.searchInput();
       this.statusFilter();
+      this.sortEvent();
       this.render();
+      this.dragEvent();
     },
 
     taskItemClicked() {
@@ -225,6 +217,7 @@ const MainTodo = (() => {
                 window.electronAPI.taskCompleted(todo);
               }
             }
+            this.updateStatics();
           }
         };
       });
@@ -250,6 +243,40 @@ const MainTodo = (() => {
       });
     },
 
+    sortEvent() {
+      var _this = this;
+      const sortMenu = document.querySelector(
+        '.sort-wrapper .relative.mt-2 ul'
+      );
+      const sortButton = document.querySelector(
+        '.sort-wrapper .relative.mt-2 button'
+      );
+      const displaySpan = sortButton.querySelector(
+        '.sort-wrapper .block.truncate'
+      );
+
+      sortButton.addEventListener('click', function (e) {
+        e.stopPropagation();
+        sortMenu.style.display =
+          sortMenu.style.display === 'block' ? 'none' : 'block';
+      });
+
+      sortMenu.querySelectorAll('li').forEach((li) => {
+        li.addEventListener('click', function (e) {
+          e.stopPropagation();
+          displaySpan.textContent =
+            this.querySelector('.block.truncate').textContent;
+          filters.sortType = e.currentTarget.id;
+          sortMenu.style.display = 'none';
+          _this.render();
+        });
+      });
+
+      document.addEventListener('click', function () {
+        sortMenu.style.display = 'none';
+      });
+    },
+
     clearFilter() {
       const searchInput = document.getElementById('search_input');
       searchInput.value = '';
@@ -262,12 +289,132 @@ const MainTodo = (() => {
       filters.completed = 'all';
     },
 
+    updateStatics() {
+      const pendingTasks = todoList.filter((task) => !task.completed);
+      const completedTasks = todoList.filter((task) => task.completed);
+
+      // Update stats
+      document.getElementById('totalTasks').textContent = todoList.length;
+      document.getElementById('pendingTasks').textContent = pendingTasks.length;
+      document.getElementById('completedTasks').textContent =
+        completedTasks.length;
+    },
+
+    dragEvent() {
+      const container = document.getElementById('list_task');
+      let draggedItem = null;
+      const debouncedUpdate = debounce(updatePositionInTodoList, 500);
+      container.addEventListener('dragstart', function (e) {
+        if (e.target.classList.contains('task_item')) {
+          draggedItem = e.target;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', e.target.dataset.id);
+          setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
+      });
+
+      container.addEventListener('dragend', function (e) {
+        if (draggedItem) {
+          draggedItem.classList.remove('dragging');
+          draggedItem = null;
+        }
+      });
+
+      container.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        const dragging = container.querySelector('.dragging');
+        const afterElem = getDragAfterElement(container, e.clientY);
+        if (afterElem == null) {
+          container.appendChild(dragging);
+        } else {
+          container.insertBefore(dragging, afterElem);
+        }
+        // update postition in todoList
+        debouncedUpdate();
+      });
+
+      // Giúp highlight khi kéo qua
+      container.addEventListener('dragenter', function (e) {
+        e.preventDefault();
+      });
+
+      function updatePositionInTodoList() {
+        const taskItems = container.querySelectorAll('.task_item');
+        todoList = Array.from(taskItems).map((item) => {
+          return todoList.find((todo) => todo.id === item.dataset.id);
+        });
+        console.log(todoList);
+      }
+
+      // Hàm hỗ trợ: tìm phần tử gần nhất theo vị trí chuột
+      function getDragAfterElement(container, y) {
+        const draggableElements = [
+          ...container.querySelectorAll('.task_item:not(.dragging)'),
+        ];
+        return draggableElements.reduce(
+          (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          },
+          { offset: -Infinity }
+        ).element;
+      }
+    },
+
+    deleteTask() {
+      const deleteButtons = document.querySelectorAll('.delete_task');
+      deleteButtons.forEach((button) => {
+        button.addEventListener('click', (e) => {       
+          e.stopPropagation();
+          const taskId = e.currentTarget.dataset.id;
+          todoList = todoList.filter((todo) => todo.id !== taskId);
+          e.currentTarget.closest('.task_item').remove();
+          this.updateStatics();
+          if (window.electronAPI) {
+            window.electronAPI.taskCompleted({ id: taskId, completed: true });
+          }
+        });
+      });
+    },
+
     render() {
       const listTaskWrapper = document.querySelector('.list_task');
       const errorInput = document.querySelector('.text-error-input');
       listTaskWrapper.innerHTML = ''; // Clear existing tasks
       errorInput.textContent = ''; // Clear error message
-      let filteredTodos = todoList.filter((todo) => {
+      this.updateStatics();
+      let filteredTodos = [];
+      switch (filters.sortType) {
+        case 'priority':
+          const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+          filteredTodos = [...todoList].sort((a, b) => {
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          });
+          break;
+        case 'deadline':
+          filteredTodos = [...todoList].sort((a, b) => {
+            if (!a.deadline && !b.deadline) return 0;
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return new Date(a.deadline) - new Date(b.deadline);
+          });
+          break;
+        case 'status':
+          filteredTodos = [...todoList].sort((a, b) => {
+            return a.completed === b.completed ? 0 : a.completed ? 1 : -1;
+          });
+          break;
+        default:
+          filteredTodos = [...todoList];
+          break;
+      }
+
+      filteredTodos = filteredTodos.filter((todo) => {
         // Filter by search text
         if (
           filters.searchText &&
@@ -295,6 +442,7 @@ const MainTodo = (() => {
       filteredTodos.forEach((todo) => {
         const taskItem = document.createElement('div');
         taskItem.className = 'flex items-center justify-between mb-1 task_item';
+        taskItem.setAttribute('draggable', true);
         if (todo.completed) {
           taskItem.setAttribute('disabled', true);
         }
@@ -310,20 +458,40 @@ const MainTodo = (() => {
                     todo.text
                   }</span>
               </div>
-              <div class="priority-item flex justify-between items-center px-2 py-1 transition-all duration-300">
+              <div class="priority-item flex justify-between items-center py-1 transition-all duration-300">
                   <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
                     stylePriority[todo.priority].bg
                   } border ${stylePriority[todo.priority].border} ${
           stylePriority[todo.priority].text
-        } rounded-[2px] box-border text-[14px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
+        } rounded-[2px] box-border text-[14px] leading-[20px] list-none m-0 mr-1 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
                   ${todo.priority}
                   </span>
               </div>
+               <div class="flex items-center gap-2">
+               <span class="cursor-pointer delete_task" data-id="${todo.id}">
+               <svg xmlns="http://www.w3.org/2000/svg" view
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true">
+                   <path fill-rule="evenodd" d="M7 4V3a2 2 0 1 1 4 0v1h3.5a.5.5 0 0 1 0 1H16v1a1 1 0 0 1-1 1h-1v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7H5a1 1 0 0 1-1-1V5h1.5a.5.5 0 0 1 0-1H7zm2-1a1 1 0 0 1 2 0v1H9V3zm-3 4v10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7H6zm3 2a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6A.5.5 0 0 1 9 9zm2 .5a.5.5 0 0 1 1 0v6a.5.5 0 0 1-1 0v-6z" clip-rule="evenodd"/>
+               </svg> 
+               </span>
+               
+               <span class="cursor-pointer edit_task" data-id="${todo.id}">
+               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+  <path d="M17.414 2.586a2 2 0 0 0-2.828 0l-9.086 9.086a2 2 0 0 0-.516.878l-1.342 4.03a1 1 0 0 0 1.263 1.263l4.03-1.342a2 2 0 0 0 .878-.516l9.086-9.086a2 2 0 0 0 0-2.828zm-11.03 10.616 7.793-7.792 2.207 2.207-7.793 7.793-2.207-2.208zm-1.072 1.692 1.207 1.207-2.15.717.717-2.151z"/>
+</svg>
+               </span>
+
+
+
+               </div>
+
+
               `;
         listTaskWrapper.appendChild(taskItem);
       });
 
       this.taskItemClicked();
+      this.deleteTask();
     },
   };
 })();
@@ -428,6 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function setupAutoSave() {
+  return;
   setInterval(async () => {
     if (window.electronAPI) {
       const result = await window.electronAPI.autoSaveTasks(todoList);
@@ -442,5 +611,5 @@ async function loadAutoSavedTasks() {
       todoList = result.todoList;
     }
   }
-   MainTodo.init();
+  MainTodo.init();
 }
