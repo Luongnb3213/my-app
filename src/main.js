@@ -27,8 +27,6 @@ const createWindow = () => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 };
 
 
@@ -70,6 +68,14 @@ ipcMain.handle('task-added', async (event, task) => {
   );
 });
 
+
+// Notification for new task edit
+ipcMain.handle('task-edit', async (event, task) => {
+  showNotification(
+    'New Task Edit',
+    `📝 "${task.text}" - Priority: ${task.priority}`
+  );
+});
 
 // FILE
 

@@ -261,68 +261,23 @@
       <!-- Add Task  -->
 
       <!-- Reminder Setting -->
-      <div class="reminder-setting">
-        <label class="font-bold text-base">Set Deadline: </label>
-        <input type="datetime-local" id="reminderTime" />
-        <button
-          class="h-8 px-4 py-1  bg-[#1890ff] border border-[#1890ff] text-white text-sm rounded hover:bg-[#40a9ff] hover:border-[#40a9ff] transition-all duration-200">⏰
-          Set Deadline</button>
+      <div class="reminder-setting flex items-start  justify-between flex-col">
+        <div class="flex justify-between items-center w-full">
+          <div class="reminder-setting ">
+            <label class="font-bold text-base">Set Deadline: </label>
+            <input type="datetime-local" id="deadlineTime" />
+          </div>
+          <button id="save" class="h-8 px-4 py-1  bg-[#1890ff] border border-[#1890ff] text-white text-sm rounded hover:bg-[#40a9ff] hover:border-[#40a9ff] transition-all duration-200"">
+            SAVE DATA
+          </button>
+        </div>
+        <p class="text-red-400 text-error-deadline text-sm"></p>
       </div>
 
       <div class="task_add flex justify-center items-center h-8">
         <!-- Input -->
         <input id="todo-input"
           class="flex-1 bg-white border border-[#d9d9d9] rounded-[2px] rounded-tr-none rounded-br-none box-border text-[#000000d9] inline-block text-[14px] [font-variant:tabular-nums] leading-[1.5715] list-none m-0 min-w-0 px-[11px] py-[4px] h-full transition-all duration-300" />
-
-        <!-- Select -->
-        <!-- <div class="relative w-fit select-wrapper h-full flex items-center">
-          <button id="select-button"
-            class="h-8 px-2 border border-[#d9d9d9] bg-white text-sm text-[#000000d9] flex items-center">
-
-            <span id="selected-option" data-value="Medium" class="inline-flex items-center">
-              <span
-                class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] bg-[#e6f7ff] border border-[#91d5ff] text-[#096dd9] rounded-[2px] box-border text-[12px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
-                Medium
-              </span>
-            </span>
-          </button>
-
-
-          <ul id="dropdown" class="absolute bottom-full mb-1 w-full bg-white  rounded shadow z-10 text-sm hidden">
-
-            <li class="hover:bg-[#f5f5f5] cursor-pointer" data-value="High">
-              <div data-value="High"
-                class="priority-item_select w-full flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-300">
-                <span
-                  class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] bg-[#fff1f0] border border-[#ffa39e] text-[#cf1322] rounded-[2px] box-border text-[12px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
-                  High
-                </span>
-              </div>
-            </li>
-            <li class="hover:bg-[#f5f5f5] cursor-pointer" data-value="Medium">
-              <div data-value="Medium"
-                class="priority-item_select w-full flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-300">
-                <span
-                  class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] bg-[#e6f7ff] border border-[#91d5ff] text-[#096dd9] rounded-[2px] box-border text-[12px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
-                  Medium
-                </span>
-
-              </div>
-            </li>
-            <li class=" hover:bg-[#f5f5f5] cursor-pointer" data-value="Low">
-              <div data-value="Low"
-                class="priority-item_select w-full flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-300">
-                <span
-                  class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] bg-gray-600 border border-[#0000] text-white rounded-[2px] box-border text-[12px] leading-[20px] list-none m-0 mr-2 opacity-100 px-[7px] whitespace-nowrap transition-all duration-300">
-                  Low
-                </span>
-
-              </div>
-            </li>
-          </ul>
-        </div> -->
-
-
         <priority-dropdown id="priority-dropdown-add">
           <div class="relative w-fit select-wrapper h-full flex items-center">
             <button
@@ -401,7 +356,7 @@
                   <div class="mt-2">
                     <div class="task_add flex justify-center items-center h-8">
                       <!-- Input -->
-                      <input id="todo-input"
+                      <input id="todo-input_edit"
                         class="flex-1 bg-white border border-[#d9d9d9] rounded-[2px] rounded-tr-none rounded-br-none box-border text-[#000000d9] inline-block text-[14px] [font-variant:tabular-nums] leading-[1.5715] list-none m-0 min-w-0 px-[11px] py-[4px] h-full transition-all duration-300" />
                       <priority-dropdown id="priority-dropdown-edit">
                         <div class="relative w-fit select-wrapper h-full flex items-center">
@@ -448,14 +403,13 @@
                         </div>
                       </priority-dropdown>
                     </div>
+                    <p class="text-red-400 text-error-input_edit text-sm"></p>
 
                     <div class="reminder-setting mt-3">
                       <label class="font-bold text-base">Edit Deadline: </label>
-                      <input type="datetime-local" id="reminderTime" />
-                      <button
-                        class="h-8 px-4 py-1  bg-[#1890ff] border border-[#1890ff] text-white text-sm rounded hover:bg-[#40a9ff] hover:border-[#40a9ff] transition-all duration-200">⏰
-                        Edit Deadline</button>
+                      <input type="datetime-local" id="reminderTimePopup" />
                     </div>
+                    <p class="text-red-400 text-error-deadline_edit text-sm"></p>
 
                   </div>
                 </div>

@@ -372,11 +372,13 @@ const MainTodo = (() => {
         button.addEventListener('click', (e) => {
           e.stopPropagation();
           const taskId = e.currentTarget.dataset.id;
+          const taskCompleted = todoList.find((todo) => todo.id == taskId);
           todoList = todoList.filter((todo) => todo.id !== taskId);
           e.currentTarget.closest('.task_item').remove();
+          
           this.updateStatics();
           if (window.electronAPI) {
-            window.electronAPI.taskCompleted({ id: taskId, completed: true });
+            window.electronAPI.taskCompleted(taskCompleted);
           }
         });
       });
@@ -387,16 +389,22 @@ const MainTodo = (() => {
       editButtons.forEach((button) => {
         button.addEventListener('click', (e) => {
           e.stopPropagation();
-          editPopup.openPopup();
+          editPopup.openPopup(e.currentTarget.dataset.id);
         });
       });
     },
 
+    clearErrorInput() {
+      const errorInput = document.querySelector('.text-error-input');
+      const errorDeadline = document.querySelector('.text-error-deadline');
+      errorInput.textContent = ''; // Clear error message
+      errorDeadline.textContent = ''; // Clear deadline error message
+    },
+
     render() {
       const listTaskWrapper = document.querySelector('.list_task');
-      const errorInput = document.querySelector('.text-error-input');
       listTaskWrapper.innerHTML = ''; // Clear existing tasks
-      errorInput.textContent = ''; // Clear error message
+      this.clearErrorInput();
       this.updateStatics();
       let filteredTodos = [];
       switch (filters.sortType) {
@@ -508,9 +516,12 @@ const MainTodo = (() => {
 })();
 
 const editPopup = (() => {
+  var taskEditId;
   const popup = document.getElementById('edit-popup');
   const popupInner = document.getElementById('edit-popup-inner');
-
+  const todo_input_edit = popupInner.querySelector('#todo-input_edit');
+  const selected_option = popupInner.querySelector('.selected-option');
+  const dealineEdit = popupInner.querySelector('#reminderTimePopup');
   return {
     init() {
       this.bindEvents();
@@ -529,7 +540,8 @@ const editPopup = (() => {
 
       edit_confirm_button.addEventListener('click', (e) => {
         e.preventDefault();
-        this.closePopup();
+        this.editTask();
+        MainTodo.render();
       });
 
       document.getElementById('edit-popup')?.addEventListener('click', (e) => {
@@ -539,8 +551,58 @@ const editPopup = (() => {
       });
     },
 
-    openPopup() {
+    checkErrorInput() {
+      let error = false;
+      const errorInputEdit = document.querySelector('.text-error-input_edit');
+      const errorDeadlineEdit = document.querySelector(
+        '.text-error-deadline_edit'
+      );
+      const dealineEdit = popupInner.querySelector('#reminderTimePopup');
+      const dateDeadlineEdit = new Date(dealineEdit.value);
+      if (todo_input_edit.value.trim() === '') {
+        errorInputEdit.textContent = 'Please enter a task.';
+        error = true;
+      }
+
+      if (dealineEdit.value.toString().trim() === '') {
+        errorDeadlineEdit.textContent = 'Please select a deadline.';
+        error = true;
+      }
+
+      if (dateDeadlineEdit < new Date()) {
+        errorDeadlineEdit.textContent = 'Deadline must be in the future.';
+        error = true;
+      }
+
+      return {
+        error,
+        data: {
+          text: todo_input_edit.value.trim(),
+          deadline: dealineEdit.value.toString().trim(),
+          priority: selected_option.dataset.value,
+        },
+      };
+    },
+
+    openPopup(id) {
+      const todo = todoList.find((todo) => todo.id === id);
+      taskEditId = id;
+      if (!todo) return;
+
+      todo_input_edit.value = todo.text;
+      selected_option.dataset.value = todo.priority;
+      selected_option.innerHTML = `
+        <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
+          stylePriority[todo.priority].bg
+        } border ${stylePriority[todo.priority].border} ${
+        stylePriority[todo.priority].text
+      } rounded-[2px] box-border text-[12px] leading-[20px] m-0 mr-2 px-[7px]">
+          ${todo.priority}    
+        </span>`;
+      dealineEdit.value = todo.deadline || '';
+
       popup.classList.remove('hidden');
+
       setTimeout(() => {
         popupInner.classList.remove('opacity-0', 'scale-95');
         popupInner.classList.add('opacity-100', 'scale-100');
@@ -555,6 +617,40 @@ const editPopup = (() => {
         popup.classList.add('hidden');
       }, 300);
     },
+
+    clearError() {
+      const errorInputEdit = document.querySelector('.text-error-input_edit');
+      const errorDeadlineEdit = document.querySelector(
+        '.text-error-deadline_edit'
+      );
+      errorInputEdit.textContent = '';
+      errorDeadlineEdit.textContent = '';
+    },
+
+    editTask() {
+      if (!taskEditId) return;
+      const { data, error } = this.checkErrorInput();
+      if (error) return;
+      todoList = todoList.map((todo) => {
+        if (todo.id === taskEditId) {
+          return {
+            ...todo,
+            text: data.text,
+            priority: data.priority,
+            deadline: data.deadline,
+          };
+        }
+
+        return todo;
+      });
+      const todo = todoList.find((todo) => todo.id === taskEditId);
+      if (window.electronAPI) {
+        window.electronAPI.taskEdit(todo);
+      }
+      this.closePopup();
+      this.clearError();
+      taskEditId = null;
+    },
   };
 })();
 
@@ -566,31 +662,69 @@ const AddTodo = (() => {
       this.submitButton();
     },
 
+    checkErrorInput() {
+      let error = false;
+      const todoInput = document.getElementById('todo-input');
+      const deadlineTime = document.querySelector('#deadlineTime');
+      const errorInput = document.querySelector('.text-error-input');
+      const errorDeadline = document.querySelector('.text-error-deadline');
+      const dateDeadline = new Date(deadlineTime.value);
+      if (todoInput.value.trim() === '') {
+        errorInput.textContent = 'Please enter a task.';
+        error = true;
+      }
+
+      if (deadlineTime.value.toString().trim() === '') {
+        errorDeadline.textContent = 'Please select a deadline.';
+        error = true;
+      }
+
+      if (dateDeadline < new Date()) {
+        errorDeadline.textContent = 'Deadline must be in the future.';
+        error = true;
+      }
+
+      return {
+        error,
+        data: {
+          text: todoInput.value.trim(),
+          deadline: deadlineTime.value.toString().trim(),
+        },
+      };
+    },
+
+    clearInput() {
+      const todoInput = document.getElementById('todo-input');
+      const deadlineTime = document.querySelector('#deadlineTime');
+      todoInput.value = '';
+      deadlineTime.value = '';
+    },
+
     submitButton() {
       const submitButton = document.getElementById('submit-button');
       submitButton.addEventListener('click', (e) => {
         e.preventDefault();
-        const todoInput = document.getElementById('todo-input');
-        const selectedOption = document.getElementById('priority-dropdown-add')?.querySelector(".selected-option");
-        const errorInput = document.querySelector('.text-error-input');
-
-        if (todoInput.value.trim() === '') {
-          errorInput.textContent = 'Please enter a task.';
+        const selectedOption = document
+          .getElementById('priority-dropdown-add')
+          ?.querySelector('.selected-option');
+        const result = this.checkErrorInput();
+        if (result.error) {
           return;
         }
-
         const newTodo = {
           id: Date.now().toString(),
-          text: todoInput.value.trim(),
+          text: result.data.text,
           priority: selectedOption.dataset.value,
+          deadline: result.data.deadline,
           completed: false,
         };
 
         todoList.push(newTodo);
-        todoInput.value = '';
         MainTodo.clearFilter();
         SelectComboBox.clear();
+        this.clearInput();
         MainTodo.render();
+        Save();
         if (window.electronAPI) {
           window.electronAPI.taskAdded(newTodo);
         }
@@ -622,17 +756,22 @@ if (exportButton) {
 
 document.addEventListener('DOMContentLoaded', function () {
   loadAutoSavedTasks();
-  setupAutoSave();
 });
 
-function setupAutoSave() {
-  return;
-  setInterval(async () => {
+
+
+function Save() {
     if (window.electronAPI) {
-      const result = await window.electronAPI.autoSaveTasks(todoList);
+      window.electronAPI.autoSaveTasks(todoList);
+      window.electronAPI.showNotification("Tasks saved successfully!" , "✅ Tasks have been saved");
     }
-  }, 5000);
 }
+
+
+document.getElementById('save').addEventListener('click', (e) => {
+  e.preventDefault();
+  Save();
+});
 
 async function loadAutoSavedTasks() {
   if (window.electronAPI) {
@@ -644,12 +783,8 @@ async function loadAutoSavedTasks() {
   MainTodo.init();
 }
 
-
-
-
 class PriorityDropdown extends HTMLElement {
   connectedCallback() {
-    console.log(this)
     const button = this.querySelector('.select-button');
     const dropdown = this.querySelector('.dropdown');
     const selected = this.querySelector('.selected-option');
@@ -664,9 +799,7 @@ class PriorityDropdown extends HTMLElement {
         const value = item.dataset.value;
         selected.dataset.value = value;
         selected.innerHTML = `
-          <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${
-            stylePriority[value].bg
-          } border ${stylePriority[value].border} ${stylePriority[value].text} rounded-[2px] box-border text-[12px] leading-[20px] m-0 mr-2 px-[7px]">
+          <span class="inline-block font-[tabular-nums] [font-feature-settings:'tnum','tnum'] ${stylePriority[value].bg} border ${stylePriority[value].border} ${stylePriority[value].text} rounded-[2px] box-border text-[12px] leading-[20px] m-0 mr-2 px-[7px]">
             ${value}
           </span>`;
         dropdown.classList.add('hidden');

@@ -17,4 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   taskCompleted: (task) => ipcRenderer.invoke('task-completed', task),
 
   taskAdded: (task) => ipcRenderer.invoke('task-added', task),
+
+
+  taskEdit: (task) => ipcRenderer.invoke('task-edit', task),
+
 });
